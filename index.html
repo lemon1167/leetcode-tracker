@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 刷題追蹤器 | 敏捷複習系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+// Tailwind 黑暗模式設定
+tailwind.config = {
+darkMode: 'class',
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+body {
+font-family: 'Noto Sans TC', sans-serif;
+transition: background-color 0.3s, color 0.3s;
+}
+/* 隱藏元素用的class */
+.hidden-view { display: none !important; }
+/* 難度顏色對應 */
+.badge-easy { background-color: #dcfce7; color: #166534; }
+.badge-medium { background-color: #fef08a; color: #854d0e; }
+.badge-hard { background-color: #fee2e2; color: #991b1b; }
+/* 黑暗模式微調 */
+.dark body { background-color: #111827; color: #f3f4f6; }
+.dark .bg-white { background-color: #1f2937; color: #f3f4f6; }
+.dark .text-gray-800 { color: #f3f4f6; }
+.dark .text-gray-700 { color: #e5e7eb; }
+.dark .text-gray-600 { color: #d1d5db; }
+.dark .text-gray-500 { color: #9ca3af; }
+.dark .border-gray-100, .dark .border-gray-200, .dark .border-gray-300 { border-color: #374151; }
+.dark .bg-gray-50 { background-color: #111827; }
+.dark .bg-gray-100 { background-color: #374151; }
+.dark input, .dark select, .dark textarea { background-color: #374151; color: white; border-color: #4b5563; }
+.dark .hover\:bg-gray-50:hover { background-color: #374151; }
+/* 捲軸美化 */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+.dark ::-webkit-scrollbar-track { background: #1f2937; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+</style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col bg-gray-50">
+<div id="login-section" class="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950">
+<div class="bg-white p-10 rounded-2xl shadow-xl max-w-md w-full text-center dark:bg-gray-800">
+<div class="mb-6 flex justify-center">
+<i class="fa-solid fa-code text-5xl text-blue-600"></i>
+</div>
+<h1 class="text-3xl font-bold mb-2 text-gray-800 dark:text-white">LeetCode 追蹤器</h1>
+<p class="text-gray-500 mb-8 dark:text-gray-400">結合遺忘曲線的智慧刷題系統</p>
+<button id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 flex items-center justify-center gap-3">
+登入 <i class="fa-brands fa-google text-xl"></i> 使用 Google 帳號
+</button>
+<p class="text-xs text-gray-400 mt-6">期末專案 DEMO 測試版</p>
+</div>
+</div>
+
+<div id="dashboard-section" class="hidden-view flex-1 flex flex-col h-full overflow-hidden">
+<header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10 dark:bg-gray-800 dark:border-b dark:border-gray-700">
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-code text-2xl text-blue-600"></i>
+<h1 class="text-xl font-bold text-gray-800 dark:text-white">LeetCode 追蹤器</h1>
+</div>
+<div class="flex items-center gap-4">
+<button id="dark-mode-toggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 transition-colors">
+<i class="fa-solid fa-moon dark:fa-sun"></i>
+</button>
+<div class="flex items-center gap-2">
+<img id="user-pic" src="" alt="User" class="w-10 h-10 rounded-full border-2 border-blue-100 shadow-sm">
+<span id="user-name" class="font-medium text-gray-700 dark:text-gray-200 hidden sm:block">載入中...</span>
+</div>
+<button id="btn-logout" class="bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 px-4 py-2 rounded-lg font-medium transition duration-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-red-900">
+登出
+</button>
+</div>
+</header>
+
+<main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+<div class="max-w-7xl mx-auto space-y-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500 dark:bg-gray-800">
+<div class="text-sm text-gray-500 font-medium">總刷題數</div>
+<div class="text-3xl font-bold text-gray-800 mt-1 dark:text-white" id="stat-total">0</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500 dark:bg-gray-800">
+<div class="text-sm text-gray-500 font-medium">Easy (簡單)</div>
+<div class="text-3xl font-bold text-gray-800 mt-1 dark:text-white" id="stat-easy">0</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500 dark:bg-gray-800">
+<div class="text-sm text-gray-500 font-medium">Medium (中等)</div>
+<div class="text-3xl font-bold text-gray-800 mt-1 dark:text-white" id="stat-medium">0</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500 dark:bg-gray-800">
+<div class="text-sm text-gray-500 font-medium">Hard (困難)</div>
+<div class="text-3xl font-bold text-gray-800 mt-1 dark:text-white" id="stat-hard">0</div>
+</div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="lg:col-span-5 space-y-6">
+<div class="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full min-h-[500px] dark:bg-gray-800">
+<h2 class="text-lg font-bold text-gray-800 mb-4 dark:text-white flex items-center gap-2">
+<i class="fa-solid fa-pen-to-square text-blue-500"></i> 新增 / 編輯題目
+</h2>
+<div class="flex border-b border-gray-200 mb-5">
+<button id="tab-basic" class="py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium text-sm focus:outline-none transition-colors flex items-center gap-1">
+<i class="fa-solid fa-circle-info"></i> 基本資料
+</button>
+<button id="tab-notes" class="py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm focus:outline-none transition-colors flex items-center gap-1 dark:text-gray-400">
+<i class="fa-solid fa-book"></i> 解題筆記
+</button>
+</div>
+<div class="flex-1 flex flex-col">
+<div id="content-basic" class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">LeetCode 題目名稱</label>
+<div class="flex gap-2">
+<input type="text" id="slug" placeholder="例: 1. Two Sum" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition dark:bg-gray-700 dark:border-gray-600">
+<button id="btn-fetch" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition duration-200 whitespace-nowrap">
+<i class="fa-solid fa-bolt"></i> 抓取
+</button>
+</div>
+<p class="text-xs text-gray-400 mt-1">系統會自動轉換名稱格式並抓取資料</p>
+</div>
+<hr class="border-gray-100 dark:border-gray-700">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">題目名稱 *</label>
+<input type="text" id="title" placeholder="如: 1. Two Sum" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600">
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">難易度 *</label>
+<select id="difficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600">
+<option value="">請選擇</option>
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">演算法標籤</label>
+<input type="text" id="tags" placeholder="如: Array, Hash" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600">
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">題目網址</label>
+<input type="text" id="url" placeholder="https://..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600">
+</div>
+</div>
+<div id="content-notes" class="hidden-view flex-1 flex flex-col">
+<label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">詳細筆記內容</label>
+<textarea id="notes" class="flex-1 w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none min-h-[300px] dark:bg-gray-700 dark:border-gray-600" placeholder="紀錄你的心得..."></textarea>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+<div id="existing-alert" class="hidden-view bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg flex flex-col gap-2 mb-3 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-200">
+<div class="flex items-center gap-2">
+<i class="fa-solid fa-circle-exclamation text-yellow-600"></i>
+<span class="text-sm font-bold">這題你之前已經寫過囉!</span>
+</div>
+<button type="button" id="btn-load-existing" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-2 px-4 rounded transition shadow-sm">
+載入之前的紀錄並修改
+</button>
+</div>
+<button id="btn-save" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg shadow transition duration-200">
+<i class="fa-solid fa-floppy-disk mr-2"></i> 儲存至資料庫
+</button>
+<button id="btn-cancel-edit" class="hidden-view w-full text-sm text-gray-500 hover:text-gray-700 py-2 mt-2 transition duration-200 dark:text-gray-400">
+取消編輯
+</button>
+</div>
+</div>
+</div>
+
+<div class="lg:col-span-7 flex flex-col gap-6">
+<div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl shadow-sm border border-orange-100 p-6 dark:from-orange-950/20 dark:to-amber-950/20 dark:border-orange-900">
+<h2 class="text-lg font-bold text-orange-800 mb-4 flex items-center gap-2 dark:text-orange-400">
+<i class="fa-solid fa-bullseye text-orange-500"></i> 今日推薦複習
+</h2>
+<div id="review-list" class="space-y-3">
+<div class="text-center text-gray-500 py-4 dark:text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>載入中...</div>
+</div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm p-6 flex-1 dark:bg-gray-800">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+<h2 class="text-lg font-bold text-gray-800 flex items-center gap-2 dark:text-white">
+<i class="fa-solid fa-list text-gray-500"></i> 所有刷題紀錄
+</h2>
+<div class="relative w-full sm:w-64">
+<i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+<input type="text" id="tag-search" placeholder="搜尋演算法標籤..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider dark:bg-gray-700 dark:text-gray-300">
+<th class="py-3 px-4 rounded-tl-lg font-medium">題目/標籤</th>
+<th class="py-3 px-4 font-medium">難度</th>
+<th class="py-3 px-4 font-medium">上次練習</th>
+<th class="py-3 px-4 rounded-tr-lg font-medium text-right">操作</th>
+</tr>
+</thead>
+<tbody id="problem-list" class="divide-y divide-gray-100 dark:divide-gray-700">
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<div id="note-view-section" class="hidden-view flex-1 flex flex-col h-full overflow-y-auto bg-gray-50 z-50 dark:bg-gray-900">
+<header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 dark:bg-gray-800">
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-book-open text-2xl text-indigo-600"></i>
+<h1 class="text-xl font-bold text-gray-800 dark:text-white">解題筆記</h1>
+</div>
+<button onclick="window.closeNoteView()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center gap-2 dark:bg-gray-700 dark:text-gray-200">
+<i class="fa-solid fa-arrow-left"></i> 返回儀表板
+</button>
+</header>
+<main class="flex-1 p-4 sm:p-6 md:p-10 max-w-5xl mx-auto w-full">
+<div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+<div class="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-8 md:px-10 md:py-10 border-b border-gray-100 dark:from-indigo-950/40 dark:to-blue-950/40 dark:border-gray-700">
+<div class="flex items-center gap-3 mb-4">
+<span id="nv-difficulty" class="px-3 py-1 rounded-full text-sm font-bold shadow-sm"></span>
+<span class="text-gray-500 text-sm dark:text-gray-400"><i class="fa-regular fa-clock mr-1"></i> 上次練習: <span id="nv-last-practice"></span></span>
+</div>
+<h1 id="nv-title" class="text-2xl md:text-4xl font-bold text-gray-800 leading-tight mb-5 dark:text-white"></h1>
+<div id="nv-url-container"></div>
+</div>
+<div class="p-6 md:p-10">
+<div id="nv-tags-container" class="mb-8 pb-8 border-b border-gray-100 hidden dark:border-gray-700">
+<h3 class="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">演算法標籤</h3>
+<div id="nv-tags" class="flex flex-wrap gap-2"></div>
+</div>
+<div>
+<h3 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">筆記內容</h3>
+<div id="nv-content" class="text-gray-700 leading-relaxed whitespace-pre-wrap text-lg bg-gray-50 p-6 rounded-xl border border-gray-200 min-h-[300px] dark:bg-gray-900/50 dark:text-gray-300 dark:border-gray-700 break-all"></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCZzL7pPAmlkQQmq4Z7G4dwGy9y2hC46Q4",
+  authDomain: "leetcodetracker-4ffc7.firebaseapp.com",
+  databaseURL: "https://leetcodetracker-4ffc7-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "leetcodetracker-4ffc7",
+  storageBucket: "leetcodetracker-4ffc7.firebasestorage.app",
+  messagingSenderId: "15667963525",
+  appId: "1:15667963525:web:c1a50340795f5385ea2bec",
+  measurementId: "G-E07PFE13YL"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let editingDocId = null;
+let currentProblems = {};
+let foundExistingDocId = null;
+
+// === 黑暗模式邏輯 ===
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+const htmlEl = document.documentElement;
+
+if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+htmlEl.classList.add('dark');
+}
+
+darkModeToggle.addEventListener('click', () => {
+htmlEl.classList.toggle('dark');
+localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+});
+
+const loginSection = document.getElementById('login-section');
+const dashboardSection = document.getElementById('dashboard-section');
+const problemList = document.getElementById('problem-list');
+const reviewList = document.getElementById('review-list');
+
+// === 分頁切換邏輯 (Tabs) ===
+const tabBasic = document.getElementById('tab-basic');
+const tabNotes = document.getElementById('tab-notes');
+const contentBasic = document.getElementById('content-basic');
+const contentNotes = document.getElementById('content-notes');
+
+function switchTab(tabName) {
+if (tabName === 'basic') {
+tabBasic.classList.add('border-blue-500', 'text-blue-600');
+tabBasic.classList.remove('border-transparent', 'text-gray-500');
+tabNotes.classList.remove('border-blue-500', 'text-blue-600');
+tabNotes.classList.add('border-transparent', 'text-gray-500');
+contentBasic.classList.remove('hidden-view');
+contentNotes.classList.add('hidden-view');
+} else {
+tabNotes.classList.add('border-blue-500', 'text-blue-600');
+tabNotes.classList.remove('border-transparent', 'text-gray-500');
+tabBasic.classList.remove('border-blue-500', 'text-blue-600');
+tabBasic.classList.add('border-transparent', 'text-gray-500');
+contentNotes.classList.remove('hidden-view');
+contentBasic.classList.add('hidden-view');
+}
+}
+
+tabBasic.addEventListener('click', () => switchTab('basic'));
+tabNotes.addEventListener('click', () => switchTab('notes'));
+
+// === 登入系統 ===
+onAuthStateChanged(auth, (user) => {
+if (user) {
+currentUser = user;
+document.getElementById('user-name').innerText = user.displayName;
+document.getElementById('user-pic').src = user.photoURL;
+loginSection.classList.add('hidden-view');
+dashboardSection.classList.remove('hidden-view');
+loadProblems();
+} else {
+currentUser = null;
+loginSection.classList.remove('hidden-view');
+dashboardSection.classList.add('hidden-view');
+}
+});
+
+document.getElementById('btn-login').addEventListener('click', () => {
+signInWithPopup(auth, new GoogleAuthProvider()).catch(error => {
+if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+Swal.fire('登入錯誤', error.message, 'error');
+}
+});
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+Swal.fire({
+title: '確定要登出嗎？', icon: 'question', showCancelButton: true, confirmButtonText: '登出'
+}).then((result) => { if (result.isConfirmed) signOut(auth); });
+});
+
+// === 自動抓取與檢查 ===
+function checkTitleExistence(inputTitle) {
+if (!inputTitle || editingDocId) {
+document.getElementById('existing-alert').classList.add('hidden-view');
+foundExistingDocId = null; return;
+}
+const targetTitle = inputTitle.trim().toLowerCase();
+let foundId = null;
+for (const [id, data] of Object.entries(currentProblems)) {
+if (data.title.toLowerCase() === targetTitle) { foundId = id; break; }
+}
+const alertBox = document.getElementById('existing-alert');
+if (foundId) {
+foundExistingDocId = foundId;
+alertBox.classList.remove('hidden-view');
+} else {
+foundExistingDocId = null;
+alertBox.classList.add('hidden-view');
+}
+}
+
+document.getElementById('title').addEventListener('input', (e) => checkTitleExistence(e.target.value));
+
+document.getElementById('btn-load-existing').addEventListener('click', () => {
+if (foundExistingDocId) {
+window.editProblem(foundExistingDocId);
+document.getElementById('existing-alert').classList.add('hidden-view');
+}
+});
+
+document.getElementById('btn-fetch').addEventListener('click', async () => {
+    const rawInput = document.getElementById('slug').value.trim();
+    if (!rawInput) return Swal.fire('提示', '請先輸入 LeetCode 題目名稱！', 'warning'); 
+
+    switchTab('basic'); 
+    const slug = rawInput.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+    
+    const btn = document.getElementById('btn-fetch');
+    const originalText = btn.innerHTML; // 保存原始內容 (包含「抓取」文字與閃電圖示) 
+    
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    btn.disabled = true; 
+
+    try {
+        const res = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${slug}`); 
+        const data = await res.json(); 
+        if (data.error || !data.questionTitle) throw new Error("找不到題目"); 
+
+        // 填入資料 
+        document.getElementById('title').value = `${data.questionId}. ${data.questionTitle}`; 
+        document.getElementById('difficulty').value = data.difficulty; 
+        document.getElementById('url').value = `https://leetcode.com/problems/${slug}/`; 
+        document.getElementById('tags').value = data.topicTags ? data.topicTags.map(tag => tag.name).join(', ') : ""; 
+        
+        checkTitleExistence(document.getElementById('title').value); 
+
+        // --- 核心改動：不跳出 Swal，改為變更按鈕圖示 ---
+        btn.innerHTML = '<i class="fa-solid fa-check"></i>'; // 變更為打勾圖示
+        btn.classList.replace('bg-indigo-500', 'bg-green-500'); // 選擇性：變成綠色讓視覺更明顯
+        
+        // 1.5 秒後恢復原狀
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('bg-green-500', 'bg-indigo-500');
+            btn.disabled = false;
+        }, 1500);
+
+    } catch (e) {
+        Swal.fire('找不到題目', '請確認輸入的題目名稱是否正確！', 'error'); 
+        btn.innerHTML = originalText; // 發生錯誤時立刻恢復
+        btn.disabled = false; 
+    }
+});
+
+// === 新增/更新 ===
+document.getElementById('btn-save').addEventListener('click', async () => {
+const title = document.getElementById('title').value.trim();
+const difficulty = document.getElementById('difficulty').value;
+const url = document.getElementById('url').value.trim();
+const tags = document.getElementById('tags').value.trim();
+const notes = document.getElementById('notes').value.trim();
+
+if (!title || !difficulty) {
+switchTab('basic');
+return Swal.fire('欄位不完整', '請確認題目名稱與難易度皆已填寫！', 'warning');
+}
+if (!currentUser) return;
+const btn = document.getElementById('btn-save');
+btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 處理中...'; btn.disabled = true;
+
+try {
+const now = new Date();
+if (editingDocId) {
+await updateDoc(doc(db, "problems", editingDocId), { title, difficulty, url, tags, notes });
+Swal.fire('更新成功！', '資料已成功修改', 'success');
+resetFormUI();
+} else {
+const q = query(collection(db, "problems"), where("userId", "==", currentUser.uid), where("title", "==", title));
+const querySnapshot = await getDocs(q);
+if (!querySnapshot.empty) {
+const existingDocId = querySnapshot.docs[0].id;
+const result = await Swal.fire({
+title: '發現重複題目', text: `你要覆蓋更新並視為「今天練習過」嗎？`, icon: 'warning',
+showCancelButton: true, confirmButtonText: '是的，覆蓋更新'
+});
+if (result.isConfirmed) {
+const nextReview = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+await updateDoc(doc(db, "problems", existingDocId), { difficulty, url, tags, notes, lastPracticeTime: now.toISOString(), nextReviewDate: nextReview.toISOString() });
+Swal.fire('更新成功！', '重複的題目已更新', 'success');
+resetFormUI();
+} else { resetFormUI(false); return; }
+} else {
+const nextReview = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+await addDoc(collection(db, "problems"), { userId: currentUser.uid, title, difficulty, url, tags, notes, lastPracticeTime: now.toISOString(), nextReviewDate: nextReview.toISOString(), timestamp: now.toISOString() });
+Swal.fire('儲存成功！', '資料已寫入雲端資料庫', 'success');
+resetFormUI();
+}
+}
+loadProblems();
+} catch (e) {
+Swal.fire('發生錯誤', e.message, 'error');
+resetFormUI(false);
+}
+});
+
+function resetFormUI(clearInputs = true) {
+if (clearInputs) ['slug', 'title', 'difficulty', 'url', 'tags', 'notes'].forEach(id => document.getElementById(id).value = '');
+editingDocId = null; foundExistingDocId = null;
+const btnSave = document.getElementById('btn-save');
+btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> 儲存至資料庫';
+btnSave.classList.replace('bg-blue-500', 'bg-green-500');
+btnSave.classList.replace('hover:bg-blue-600', 'hover:bg-green-600');
+btnSave.disabled = false;
+document.getElementById('btn-cancel-edit').classList.add('hidden-view');
+document.getElementById('existing-alert').classList.add('hidden-view');
+switchTab('basic');
+}
+
+document.getElementById('btn-cancel-edit').addEventListener('click', () => resetFormUI());
+
+// === 讀取與渲染 (修改後支持搜尋) ===
+async function loadProblems() {
+if (!currentUser) return;
+try {
+const q = query(collection(db, "problems"), where("userId", "==", currentUser.uid));
+const querySnapshot = await getDocs(q);
+let htmlAll = "", htmlReview = "";
+let stats = { total: 0, Easy: 0, Medium: 0, Hard: 0 };
+const now = new Date();
+currentProblems = {};
+
+// 取得搜尋關鍵字
+const searchKeyword = document.getElementById('tag-search').value.trim().toLowerCase();
+
+querySnapshot.forEach((docSnap) => {
+const id = docSnap.id;
+const data = docSnap.data();
+currentProblems[id] = data;
+
+// 統計數據不隨搜尋變動
+stats.total++;
+if (stats[data.difficulty] !== undefined) stats[data.difficulty]++;
+
+const lastPractice = data.lastPracticeTime ? new Date(data.lastPracticeTime).toLocaleDateString() : '未知';
+const isReviewNeeded = data.nextReviewDate ? (new Date(data.nextReviewDate) <= now) : true;
+const tagsStr = data.tags || "";
+const tagBadges = tagsStr ? tagsStr.split(',').map(t => `<span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-600">${t.trim()}</span>`).join(' ') : '';
+
+// 檢查是否符合標籤搜尋條件
+const matchesSearch = !searchKeyword || tagsStr.toLowerCase().includes(searchKeyword);
+
+if (matchesSearch) {
+htmlAll += `
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+<td class="py-3 px-4">
+<div class="font-medium text-gray-800 dark:text-gray-200">${data.url ? `<a href="${data.url}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">${data.title}</a>` : data.title}</div>
+<div class="mt-1 flex flex-wrap gap-1">${tagBadges}</div>
+</td>
+<td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs font-bold badge-${data.difficulty.toLowerCase()}">${data.difficulty}</span></td>
+<td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">${lastPractice}</td>
+<td class="py-3 px-4 text-right">
+<button onclick="window.viewNote('${encodeURIComponent(JSON.stringify(data))}')" class="text-blue-500 hover:text-blue-700 mx-1 p-1"><i class="fa-solid fa-arrow-up-right-from-square text-lg"></i></button>
+<button onclick="window.editProblem('${id}')" class="text-green-500 hover:text-green-700 mx-1 p-1"><i class="fa-solid fa-pen text-lg"></i></button>
+<button onclick="window.deleteProblem('${id}')" class="text-red-400 hover:text-red-600 mx-1 p-1"><i class="fa-solid fa-trash-can text-lg"></i></button>
+</td>
+</tr>`;
+}
+
+// 今日推薦複習 (不受搜尋影響，保持其功能獨立性)
+if (isReviewNeeded) {
+htmlReview += `
+<div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-orange-100 dark:border-orange-900/50 flex justify-between items-center">
+<div>
+<h3 class="font-bold text-gray-800 dark:text-gray-200">${data.url ? `<a href="${data.url}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline"><i class="fa-solid fa-link text-xs"></i> ${data.title}</a>` : data.title}</h3>
+<div class="text-xs text-gray-500 mt-1">上次練習: ${lastPractice}</div>
+</div>
+<button onclick="window.markReviewDone('${id}')" class="bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1.5 rounded text-sm font-medium transition dark:bg-orange-900/30 dark:text-orange-300">
+<i class="fa-solid fa-check"></i> 完成複習
+</button>
+</div>`;
+}
+});
+
+problemList.innerHTML = htmlAll || `<tr><td colspan="4" class="text-center py-8 text-gray-400">${searchKeyword ? '找不到符合標籤的題目' : '目前還沒有刷題紀錄'}</td></tr>`;
+reviewList.innerHTML = htmlReview || `<div class="text-center py-6 text-orange-400 font-medium">太棒了！今天的複習任務都完成了 🎉</div>`;
+document.getElementById('stat-total').innerText = stats.total;
+document.getElementById('stat-easy').innerText = stats.Easy;
+document.getElementById('stat-medium').innerText = stats.Medium;
+document.getElementById('stat-hard').innerText = stats.Hard;
+} catch (e) { console.error("讀取失敗", e); }
+}
+
+// 監聽搜尋輸入框
+document.getElementById('tag-search')?.addEventListener('input', () => {
+loadProblems(); // 每次輸入時重新渲染清單
+});
+
+function escapeHTML(str) {
+if (!str) return '';
+return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+window.viewNote = (encodedData) => {
+const data = JSON.parse(decodeURIComponent(encodedData));
+const diffColorClass = data.difficulty === 'Easy' ? 'bg-green-100 text-green-800' : (data.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+const difficultyEl = document.getElementById('nv-difficulty');
+difficultyEl.className = `px-3 py-1 rounded-full text-sm font-bold shadow-sm ${diffColorClass}`;
+difficultyEl.textContent = data.difficulty;
+document.getElementById('nv-last-practice').textContent = data.lastPracticeTime ? new Date(data.lastPracticeTime).toLocaleDateString() : '未知';
+document.getElementById('nv-title').textContent = data.title;
+const urlContainer = document.getElementById('nv-url-container');
+if (data.url) {
+urlContainer.innerHTML = `<a href="${encodeURI(data.url)}" target="_blank" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 bg-indigo-100 hover:bg-indigo-200 px-4 py-2 rounded-lg transition font-medium text-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> 前往 LeetCode</a>`;
+} else { urlContainer.innerHTML = ''; }
+const tagsContainer = document.getElementById('nv-tags-container');
+const tagsEl = document.getElementById('nv-tags');
+if (data.tags) {
+tagsContainer.classList.remove('hidden');
+tagsEl.innerHTML = data.tags.split(',').map(t => `<span class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm px-3 py-1 rounded-full shadow-sm">${escapeHTML(t.trim())}</span>`).join('');
+} else { tagsContainer.classList.add('hidden'); }
+const contentEl = document.getElementById('nv-content');
+if (data.notes) {
+contentEl.innerHTML = escapeHTML(data.notes);
+contentEl.classList.remove('text-gray-400', 'italic');
+} else {
+contentEl.innerHTML = '沒有留下筆記內容。';
+contentEl.classList.add('text-gray-400', 'italic');
+}
+document.getElementById('dashboard-section').classList.add('hidden-view');
+document.getElementById('note-view-section').classList.remove('hidden-view');
+};
+
+window.closeNoteView = () => {
+document.getElementById('note-view-section').classList.add('hidden-view');
+document.getElementById('dashboard-section').classList.remove('hidden-view');
+};
+
+window.editProblem = (docId) => {
+const data = currentProblems[docId];
+if (!data) return;
+document.getElementById('title').value = data.title;
+document.getElementById('difficulty').value = data.difficulty;
+document.getElementById('url').value = data.url || '';
+document.getElementById('tags').value = data.tags || '';
+document.getElementById('notes').value = data.notes || '';
+editingDocId = docId;
+const btnSave = document.getElementById('btn-save');
+btnSave.innerHTML = '<i class="fa-solid fa-pen mr-2"></i> 更新紀錄';
+btnSave.classList.replace('bg-green-500', 'bg-blue-500');
+btnSave.classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
+document.getElementById('btn-cancel-edit').classList.remove('hidden-view');
+switchTab('notes');
+window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.deleteProblem = async (docId) => {
+const result = await Swal.fire({ title: '確定要刪除這筆紀錄嗎？', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: '刪除' });
+if (result.isConfirmed) {
+try { await deleteDoc(doc(db, "problems", docId)); loadProblems(); }
+catch (e) { Swal.fire('刪除失敗', e.message, 'error'); }
+}
+};
+
+window.markReviewDone = async (docId) => {
+const result = await Swal.fire({
+title: '這次複習覺得如何？', icon: 'question', showDenyButton: true, showCancelButton: true,
+confirmButtonText: '簡單 (7天)', denyButtonText: '普通 (3天)', cancelButtonText: '難 (1天)',
+confirmButtonColor: '#4CAF50', denyButtonColor: '#ff9800',
+});
+let daysToAdd = 0;
+if (result.isConfirmed) daysToAdd = 7;
+else if (result.isDenied) daysToAdd = 3;
+else if (result.dismiss === Swal.DismissReason.cancel) daysToAdd = 1;
+else return;
+try {
+const now = new Date();
+const nextReview = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+await updateDoc(doc(db, "problems", docId), { lastPracticeTime: now.toISOString(), nextReviewDate: nextReview.toISOString() });
+Swal.fire({ title: '已更新！', icon: 'success', timer: 1500, showConfirmButton: false });
+loadProblems();
+} catch (e) { Swal.fire('更新失敗', e.message, 'error'); }
+};
+</script>
+</body>
+</html>
